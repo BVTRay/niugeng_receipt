@@ -362,7 +362,7 @@
 
                         <!-- Footer Area -->
                         <div class="mt-auto relative">
-                            <div class="flex justify-between items-end">
+                            <div class="flex justify-between items-end mb-16">
                                 <div class="text-center">
                                     <p class="text-xs text-gray-400 uppercase tracking-widest mb-6">经办人签名 (Signature)</p>
                                     <div class="border-b border-gray-300 pb-2 px-8 font-serif text-xl text-gray-800 min-w-[150px]">
@@ -376,12 +376,14 @@
                                     <p class="text-xs text-brand-gold uppercase tracking-[0.2em] mt-1">{{ config.brandSub }}</p>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Bottom Decorative Line -->
-                        <div class="absolute bottom-16 left-16 right-16 border-b border-gray-200"></div>
-                        <div class="absolute bottom-6 w-full text-center text-[10px] text-gray-400 uppercase tracking-[0.3em] left-0">
-                            {{ config.footerSlogan }}
+                            
+                            <!-- Bottom Decorative Line -->
+                            <div class="border-b border-gray-200 mb-8"></div>
+                            
+                            <!-- Bottom Text -->
+                            <div class="text-center text-[10px] text-gray-400 uppercase tracking-[0.3em] pt-2">
+                                {{ config.footerSlogan }}
+                            </div>
                         </div>
 
                     </div>
