@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- SEO & Social Sharing Tags -->
+    <title>牛耕部落 | 会员权益确认函生成器</title>
+    <meta name="description" content="专为牛耕部落销售团队设计的会员权益确认函生成工具，支持在线生成、预览及导出高清图片。">
+    <meta property="og:title" content="牛耕部落 | 会员权益确认函生成器">
+    <meta property="og:description" content="一键生成新中式风格会员权益函，支持自动落款与电子印章。">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f33e.png"> <!-- Fallback image using generic rice icon -->
+
+    <!-- Favicon (Rice Ear Emoji SVG) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌾</text></svg>">
+    
+    <!-- Fonts: Inter for UI, Noto Serif SC for Receipt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Serif+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Noto Serif SC"', 'serif'],
+                    },
+                    colors: {
+                        'brand-green': '#285238', // Deep forest green from logo
+                        'brand-gold': '#A89F81',
+                        'paper-light': '#FDFBF7',
+                        'ui-bg': '#F3F4F6',
+                        'seal-red': '#df2a10', // Traditional Chinese Seal Red
+                    },
+                    boxShadow: {
+                        'soft': '0 20px 40px -15px rgba(0, 0, 0, 0.1)',
+                        'float': '0 10px 30px -5px rgba(40, 82, 56, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- html2canvas & jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif-sc { font-family: 'Noto Serif SC', serif; }
+
+        /* A4 Size Constraint: 210mm x 297mm */
+        /* At 96 DPI, ~794px x 1123px */
+        .a4-paper {
+            width: 794px;
+            height: 1123px;
+            min-width: 794px;
+            min-height: 1123px;
+            background-color: #FDFBF7;
+        }
+
+        /* Texture overlay */
+        .paper-texture::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+        
+        /* Utility for mix blend modes in images */
+        .mix-blend-multiply { mix-blend-mode: multiply; }
+
+        /* Ink Filter for Preview: Approximates seal red color for settings preview */
+        /* Note: Actual seal uses SVG filter for exact color matching */
+        .ink-filter {
+            filter: brightness(0) saturate(100%) invert(20%) sepia(90%) saturate(3500%) hue-rotate(350deg) brightness(90%) contrast(110%);
+            opacity: 0.95;
+        }
+
+        /* UI Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        [v-cloak] { display: none; }
+        
+        /* Keyframes */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-100 h-screen md:overflow-hidden overflow-auto text-gray-800">
+
+    <div id="app" v-cloak class="h-full flex flex-col md:flex-row relative">
+        
+        <!-- Background Decor -->
+        <div class="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            <div class="absolute -top-24 -left-24 w-96 h-96 bg-green-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
+            <div class="absolute top-1/2 right-0 w-80 h-80 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-40"></div>
+        </div>
+
+        <!-- Left Side: Control Panel -->
+        <div class="w-full md:w-[400px] z-20 flex flex-col md:h-full p-4 md:p-6 shrink-0">
+            <div class="bg-white/80 backdrop-blur-xl border border-white/50 rounded-3xl shadow-soft flex flex-col md:h-full overflow-hidden">
+                
+                <!-- Header -->
+                <div class="px-6 py-6 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                        <h1 class="font-bold text-gray-900 tracking-tight text-lg">{{ config.appTitle || '权益函生成助手' }}</h1>
+                        <p class="text-xs text-gray-500 font-medium">{{ config.brandName || '牛耕部落' }}</p>
+                    </div>
+                    <!-- Settings Button -->
+                    <button @click="showSettings = true" class="p-2 text-gray-400 hover:text-brand-green transition-colors rounded-full hover:bg-gray-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Form -->
+                <div class="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+                    
+                    <!-- Input Group -->
+                    <div class="flex gap-4">
+                        <div class="group flex-[3]">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">客户姓名</label>
+                            <input type="text" v-model="form.name" 
+                                class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-4 py-3 text-sm font-medium transition-all outline-none placeholder-gray-400 shadow-sm group-hover:bg-white"
+                                placeholder="姓名">
+                        </div>
+                        <div class="group flex-[4]">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">手机号码</label>
+                            <input type="tel" v-model="form.phone" 
+                                class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-4 py-3 text-sm font-medium transition-all outline-none placeholder-gray-400 shadow-sm group-hover:bg-white font-mono"
+                                placeholder="138xxxx...">
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">会员权益</label>
+                        <div class="relative">
+                            <select v-model="form.type" @change="onTypeChange" 
+                                class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-4 py-3 text-sm font-medium transition-all outline-none appearance-none cursor-pointer shadow-sm group-hover:bg-white">
+                                <option :value="null" disabled>请选择会员卡类型...</option>
+                                <option v-for="opt in config.membershipOptions" :key="opt.label" :value="opt">{{ opt.label }}</option>
+                            </select>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <div class="group flex-1">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">金额 (元)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-serif">¥</span>
+                                <input type="number" v-model="form.amount" 
+                                    class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl pl-8 pr-4 py-3 text-sm font-bold text-gray-800 transition-all outline-none shadow-sm">
+                            </div>
+                        </div>
+                        <div class="group flex-1">
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">签约日期</label>
+                            <input type="date" v-model="form.date" 
+                                class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-3 py-3 text-sm font-medium transition-all outline-none shadow-sm text-gray-600">
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">流水编号</label>
+                        <div class="relative">
+                            <input type="text" v-model="form.serial" 
+                                class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-4 py-3 text-sm font-mono text-gray-600 transition-all outline-none shadow-sm">
+                            <button @click="generateSerial" class="absolute right-2 top-1.5 bottom-1.5 px-3 bg-white rounded-xl shadow-sm hover:shadow text-gray-400 hover:text-brand-green transition-all">
+                                ↺
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5 ml-1">经办管家</label>
+                        <input type="text" v-model="form.handler" list="handler-list"
+                            class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-2xl px-4 py-3 text-sm font-medium transition-all outline-none placeholder-gray-400 shadow-sm"
+                            placeholder="请输入或选择姓名...">
+                        <datalist id="handler-list">
+                            <option v-for="h in config.handlers" :key="h" :value="h"></option>
+                        </datalist>
+                    </div>
+                </div>
+
+                <!-- Footer Actions -->
+                <div class="p-6 border-t border-gray-100 bg-white/50 space-y-3">
+                    <button @click="downloadImage" :disabled="isGenerating"
+                        class="w-full bg-brand-green hover:bg-[#1e3e2a] text-white font-semibold py-3.5 rounded-2xl shadow-float hover:shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>生成图片 (PNG)</span>
+                    </button>
+                    
+                    <button @click="downloadPDF" :disabled="isGenerating"
+                        class="w-full bg-white hover:bg-gray-50 text-brand-green border border-gray-200 font-semibold py-3.5 rounded-2xl shadow-sm transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span>生成文档 (PDF)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Preview (A4 Scaled) -->
+        <div class="flex-1 relative flex items-start md:items-center justify-center p-4 md:p-8 overflow-hidden bg-gray-100/50 min-h-[500px]">
+            <!-- Scaling Container -->
+            <div id="preview-scaler" :style="{ transform: `scale(${scale})` }" class="origin-top md:origin-center shadow-2xl transition-transform duration-300 ease-out mt-4 md:mt-0">
+                
+                <!-- THE RECEIPT (A4) -->
+                <div id="receipt-node" class="a4-paper bg-paper-light paper-texture relative text-gray-800 flex flex-col font-serif-sc">
+                    
+                    <!-- Top Green Border -->
+                    <div class="h-4 bg-brand-green w-full"></div>
+                    
+                    <!-- Content Padding -->
+                    <div class="flex-1 p-16 flex flex-col">
+                        
+                        <!-- Header / Logo -->
+                        <!-- Adjusted Spacing: items-end, mb-10, pb-5, removed min-h -->
+                        <div class="flex justify-between items-end mb-10 border-b-2 border-brand-green/10 pb-5">
+                            <!-- Left: Logo Area (Expanded) -->
+                            <div class="flex-1 pr-8">
+                                <div class="flex items-center h-full">
+                                    <!-- Logo Image or Placeholder -->
+                                    <div v-if="config.logoUrl" class="w-[144px] h-28 flex items-center justify-start overflow-hidden">
+                                         <img :src="config.logoUrl" class="max-w-full max-h-full object-contain mix-blend-multiply">
+                                    </div>
+                                    <div v-else class="flex items-center gap-4">
+                                        <div class="w-16 h-16 bg-brand-green rounded-full flex items-center justify-center text-white">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M17,13 C17,14.6568542 15.6568542,16 14,16 L14,20 L10,20 L10,16 C8.34314575,16 7,14.6568542 7,13 C7,11.3431458 8.34314575,10 10,10 L10,6 C10,4.8954305 10.8954305,4 12,4 C13.1045695,4 14,4.8954305 14,6 L14,10 C15.6568542,10 17,11.3431458 17,13 Z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h1 class="text-4xl font-bold tracking-widest text-brand-green">{{ config.brandName }}</h1>
+                                            <p class="text-xs uppercase tracking-[0.3em] text-gray-500 mt-1">{{ config.brandSub }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Right: Serial Number -->
+                            <div class="text-right pt-4">
+                                <div class="text-sm font-bold text-brand-green/60 uppercase tracking-widest mb-1">Confirmation</div>
+                                <div class="text-5xl font-bold text-gray-200">NO.{{ form.serial.split('-')[2] || '0000' }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="text-center mb-16">
+                            <h2 class="text-3xl font-bold text-gray-900 tracking-[0.2em] mb-2">{{ config.title }}</h2>
+                            <div class="w-12 h-1 bg-brand-gold mx-auto"></div>
+                            <p class="text-xs text-gray-400 uppercase tracking-widest mt-3">{{ config.subTitle }}</p>
+                        </div>
+
+                        <!-- Letter Body -->
+                        <div class="text-lg leading-loose text-justify text-gray-700 mb-12">
+                            <p class="mb-6">
+                                尊敬的 <span class="font-bold text-xl text-gray-900 border-b-2 border-brand-green/20 px-4 min-w-[100px] inline-block text-center">{{ form.name || '___________' }}</span> 先生/女士：
+                            </p>
+                            <p class="indent-10 mb-4 whitespace-pre-wrap">{{ config.introText }}</p>
+                            <p class="indent-10 whitespace-pre-wrap">{{ config.confirmText }}</p>
+                        </div>
+
+                        <!-- Details Card -->
+                        <div class="bg-brand-green/5 rounded-3xl p-10 mb-12 border border-brand-green/10 relative overflow-hidden">
+                            <!-- Background pattern -->
+                            <div class="absolute -right-10 -top-10 w-40 h-40 bg-brand-green/5 rounded-full blur-2xl"></div>
+
+                            <div class="grid grid-cols-2 gap-y-8 relative z-10">
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">权益类型 (Type)</div>
+                                    <div class="text-xl font-bold text-brand-green">
+                                        {{ form.type?.label ? form.type.label.split(' ')[0] : '未选择' }}
+                                        <span class="block text-sm font-normal text-gray-600 mt-1">
+                                            {{ form.type?.label ? form.type.label.split(' ')[1] : '' }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <!-- Amount with Auto-Stamp -->
+                                <div class="relative group">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">实付金额 (Amount)</div>
+                                    <div class="text-3xl font-serif font-bold text-gray-900 z-10 relative">¥ {{ formattedAmount }}</div>
+                                    
+                                    <!-- The Red Stamp: Automatically Generated and Positioned -->
+                                    <div class="absolute -top-8 -right-8 w-36 h-36 pointer-events-none mix-blend-multiply opacity-90 transform -rotate-6 z-20">
+                                        <!-- Dynamic SVG Stamp -->
+                                        <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-full text-seal-red fill-current drop-shadow-sm">
+                                            <defs>
+                                                <!-- Arc path for top text (semi-circle) -->
+                                                <path id="curve" d="M 24,80 A 56,56 0 1,1 136,80" />
+                                                
+                                                <!-- SVG Filter: Convert any image to exact seal red #df2a10 -->
+                                                <filter id="redInkFilter">
+                                                    <!-- Convert to grayscale first (use alpha channel) -->
+                                                    <feColorMatrix type="matrix" values="0 0 0 0 0
+                                                                                         0 0 0 0 0
+                                                                                         0 0 0 0 0
+                                                                                         0.2126 0.7152 0.0722 0 0" result="gray" />
+                                                    <!-- Flood with seal red color #df2a10 (RGB: 223, 42, 16) -->
+                                                    <feFlood flood-color="#df2a10" result="sealRed" />
+                                                    <!-- Composite: use grayscale as alpha mask for red color -->
+                                                    <feComposite in="sealRed" in2="gray" operator="in" />
+                                                </filter>
+                                            </defs>
+                                            
+                                            <!-- Outer Rings -->
+                                            <circle cx="80" cy="80" r="76" stroke="currentColor" stroke-width="4" fill="none" />
+                                            <circle cx="80" cy="80" r="72" stroke="currentColor" stroke-width="1" fill="none" />
+                                            
+                                            <!-- Curved Brand Name -->
+                                            <text font-size="14" font-weight="bold" letter-spacing="2" class="font-serif-sc">
+                                                <textPath xlink:href="#curve" startOffset="50%" text-anchor="middle">
+                                                    {{ config.brandName }}
+                                                </textPath>
+                                            </text>
+                                            
+                                            <!-- Center Logo (User Uploaded) -->
+                                            <!-- Use SVG filter for exact color matching -->
+                                            <image v-if="config.sealUrl" :href="config.sealUrl" x="50" y="45" width="60" height="60" filter="url(#redInkFilter)" />
+                                            <!-- Fallback Star if no logo -->
+                                            <text v-else x="80" y="85" font-size="40" text-anchor="middle" dominant-baseline="middle">★</text>
+
+                                            <!-- Bottom Text "专用章" -->
+                                            <text x="80" y="115" font-size="12" font-weight="bold" text-anchor="middle" class="font-serif-sc tracking-[0.3em]">{{ config.sealText }}</text>
+                                        </svg>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">生效日期 (Date)</div>
+                                    <div class="text-lg text-gray-800 font-medium">{{ form.date }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">手机号码 (Phone)</div>
+                                    <div class="text-lg font-mono text-gray-800">{{ form.phone || '—' }}</div>
+                                </div>
+
+                                <div class="col-span-2 border-t border-brand-green/10 pt-4 mt-2">
+                                    <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">流水编号 (Serial)</div>
+                                    <div class="text-lg font-mono text-gray-600 tracking-widest">{{ form.serial }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Area -->
+                        <div class="mt-auto relative">
+                            <div class="flex justify-between items-end">
+                                <div class="text-center">
+                                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-6">经办人签名 (Signature)</p>
+                                    <div class="border-b border-gray-300 pb-2 px-8 font-serif text-xl text-gray-800 min-w-[150px]">
+                                        {{ form.handler }}
+                                    </div>
+                                    <p class="text-xs text-gray-300 mt-2">经办人签字</p>
+                                </div>
+
+                                <div class="text-right pb-4">
+                                    <h3 class="text-2xl font-bold text-brand-green tracking-widest">{{ config.brandName }}</h3>
+                                    <p class="text-xs text-brand-gold uppercase tracking-[0.2em] mt-1">{{ config.brandSub }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Decorative Line -->
+                        <div class="absolute bottom-16 left-16 right-16 border-b border-gray-200"></div>
+                        <div class="absolute bottom-6 w-full text-center text-[10px] text-gray-400 uppercase tracking-[0.3em] left-0">
+                            {{ config.footerSlogan }}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS MODAL -->
+        <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                <!-- Modal Header -->
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h2 class="text-xl font-bold text-gray-800">系统设置 Configuration</h2>
+                    <button @click="showSettings = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-8">
+                    
+                    <!-- Section: Brand -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider border-b pb-2">品牌与Logo (Brand)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">品牌落款名称 (CN)</label>
+                                <input v-model="tempConfig.brandName" class="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-green/20 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">品牌落款副标题 (EN)</label>
+                                <input v-model="tempConfig.brandSub" class="w-full bg-white border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-green/20 outline-none">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">Logo 图片 (支持横版)</label>
+                                <div class="flex items-center gap-4">
+                                    <div class="h-16 w-32 border rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+                                        <img v-if="tempConfig.logoUrl" :src="tempConfig.logoUrl" class="w-full h-full object-contain">
+                                        <span v-else class="text-xs text-gray-400">无</span>
+                                    </div>
+                                    <input type="file" @change="handleLogoUpload" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-brand-green/10 file:text-brand-green hover:file:bg-brand-green/20">
+                                    <button v-if="tempConfig.logoUrl" @click="tempConfig.logoUrl = ''" class="text-xs text-red-500 hover:underline">清除</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Seal Settings -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider border-b pb-2">印章设置 (Stamp/Seal)</h3>
+                        
+                        <!-- Seal Image -->
+                        <div class="mb-4">
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">印章中心Logo (Center Logo)</label>
+                            <p class="text-[10px] text-gray-400 mb-2">上传纯图形Logo，系统会自动转换为与印章圆形和文字统一的红色。</p>
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 border rounded-full flex items-center justify-center bg-gray-50 overflow-hidden">
+                                    <img v-if="tempConfig.sealUrl" :src="tempConfig.sealUrl" class="w-10 h-10 object-contain ink-filter">
+                                    <span v-else class="text-xl text-seal-red">★</span>
+                                </div>
+                                <input type="file" @change="handleSealUpload" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                                <button v-if="tempConfig.sealUrl" @click="tempConfig.sealUrl = ''" class="text-xs text-red-500 hover:underline">恢复默认</button>
+                            </div>
+                            <p class="text-[9px] text-gray-300 mt-1">*此处为快速预览，实际印章颜色与圆形、文字完全一致</p>
+                        </div>
+
+                        <!-- Seal Text -->
+                        <div>
+                             <label class="block text-xs font-semibold text-gray-500 mb-1">印章底部文字 (Bottom Text)</label>
+                             <input v-model="tempConfig.sealText" placeholder="例如：专用章" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                             <p class="text-[10px] text-gray-400 mt-1">印章外圈文字将自动使用上方的"品牌落款名称"。</p>
+                        </div>
+                    </div>
+
+                    <!-- Section: Receipt Text -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider border-b pb-2">确认函文案 (Content)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">主标题</label>
+                                <input v-model="tempConfig.title" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">副标题 (英文)</label>
+                                <input v-model="tempConfig.subTitle" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">欢迎语 (首段)</label>
+                                <textarea v-model="tempConfig.introText" rows="2" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none"></textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">确认语 (次段)</label>
+                                <textarea v-model="tempConfig.confirmText" rows="2" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-500 mb-1">底部标语</label>
+                                <input v-model="tempConfig.footerSlogan" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Handlers -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider border-b pb-2">经办管家列表 (Handlers)</h3>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-500 mb-1">预设姓名 (用逗号分隔)</label>
+                            <textarea v-model="tempHandlersString" placeholder="例如: 张三, 李四, 王五" rows="2" class="w-full bg-white border rounded-lg px-3 py-2 text-sm outline-none"></textarea>
+                            <p class="text-[10px] text-gray-400 mt-1">输入后将在主页面的经办人输入框提供下拉选项。</p>
+                        </div>
+                    </div>
+
+                    <!-- Section: Membership Options -->
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-brand-green uppercase tracking-wider border-b pb-2">会员权益选项 (Options)</h3>
+                        <div class="space-y-2">
+                            <div v-for="(opt, index) in tempConfig.membershipOptions" :key="index" class="flex gap-2 items-center">
+                                <input v-model="opt.label" placeholder="权益名称" class="flex-1 bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                                <input v-model.number="opt.price" type="number" placeholder="价格" class="w-24 bg-white border rounded-lg px-3 py-2 text-sm outline-none">
+                                <button @click="removeOption(index)" class="text-red-400 hover:text-red-600 p-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                            <button @click="addOption" class="text-xs text-brand-green font-bold flex items-center gap-1 hover:underline mt-2">
+                                + 添加新权益
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-between">
+                    <button @click="resetDefaults" class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors">恢复默认</button>
+                    <div class="flex gap-3">
+                        <button @click="showSettings = false" class="px-6 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">取消</button>
+                        <button @click="saveSettings" class="px-6 py-2 text-sm bg-brand-green text-white rounded-lg hover:bg-[#1e3e2a] transition-colors shadow-lg shadow-green-900/20">保存设置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp, reactive, computed, onMounted, ref, watch } = Vue;
+        const { jsPDF } = window.jspdf;
+
+        // Default Configuration
+        const defaultConfig = {
+            appTitle: "权益函生成助手",
+            brandName: "牛耕部落",
+            brandSub: "The Plough Tribe",
+            logoUrl: "", 
+            title: "会员权益确认函",
+            subTitle: "Official Membership Receipt",
+            introText: "欢迎加入「牛耕部落」。这里不仅是一方农田，更是我们共同守护的自然家园。感谢您对生态农业的支持与信任。",
+            confirmText: "兹确认您已成功办理以下会员权益，我们将竭诚为您提供源自大地的纯净馈赠。",
+            footerSlogan: "自然 · 生命 · 未来",
+            sealUrl: "", // Now represents Center Logo for generated seal
+            sealText: "专用章", // New simple text field
+            membershipOptions: [
+                { label: '【尝鲜】耕友·季度体验卡', price: 698 },
+                { label: '【轻量】守护·小户年卡', price: 1398 },
+                { label: '【标准】守护·家园年卡', price: 2580 },
+                { label: '【尊享】守护·丰仓年卡', price: 4680 },
+            ],
+            handlers: ["张三", "李四"]
+        };
+
+        createApp({
+            setup() {
+                const isGenerating = ref(false);
+                const scale = ref(1);
+                const showSettings = ref(false);
+                
+                // Reactive Config State
+                const config = reactive(JSON.parse(JSON.stringify(defaultConfig)));
+                
+                // Temp Config for Modal (Changes only applied on Save)
+                const tempConfig = reactive(JSON.parse(JSON.stringify(defaultConfig)));
+                const tempHandlersString = ref("");
+
+                // Load Settings from Cloud (优先) or LocalStorage (备用)
+                onMounted(async () => {
+                    let configLoaded = false;
+                    
+                    // 尝试从云端加载配置
+                    if (window.loadConfigFromCloud) {
+                        try {
+                            const cloudConfig = await window.loadConfigFromCloud();
+                            if (cloudConfig) {
+                                // 映射云端配置到应用配置
+                                Object.assign(config, {
+                                    appTitle: cloudConfig.app_title,
+                                    brandName: cloudConfig.brand_name,
+                                    brandSub: cloudConfig.brand_sub,
+                                    logoUrl: cloudConfig.logo_url,
+                                    sealUrl: cloudConfig.seal_url,
+                                    sealText: cloudConfig.seal_text,
+                                    title: cloudConfig.title,
+                                    subTitle: cloudConfig.sub_title,
+                                    introText: cloudConfig.intro_text,
+                                    confirmText: cloudConfig.confirm_text,
+                                    footerSlogan: cloudConfig.footer_slogan,
+                                    membershipOptions: cloudConfig.membership_options,
+                                    handlers: cloudConfig.handlers
+                                });
+                                console.log('✅ 已从云端加载配置');
+                                configLoaded = true;
+                            }
+                        } catch(e) {
+                            console.warn('⚠️  云端配置加载失败，尝试本地配置', e);
+                        }
+                    }
+                    
+                    // 如果云端加载失败，从 localStorage 加载
+                    if (!configLoaded) {
+                        const saved = localStorage.getItem('plough_receipt_config_v3');
+                        if(saved) {
+                            try {
+                                const parsed = JSON.parse(saved);
+                                Object.assign(config, { ...defaultConfig, ...parsed });
+                                console.log('📦 已从本地加载配置');
+                            } catch(e) { console.error('Config Load Error', e); }
+                        }
+                    }
+                    
+                    await generateSerial();
+                    setTimeout(updateScale, 100);
+                });
+
+                // Watch for modal open to sync temp state
+                watch(showSettings, (val) => {
+                    if(val) {
+                        Object.assign(tempConfig, JSON.parse(JSON.stringify(config)));
+                        tempHandlersString.value = (config.handlers || []).join(', ');
+                    }
+                });
+
+                // Settings Logic
+                const handleLogoUpload = async (e) => {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    
+                    // 先显示本地预览（立即反馈）
+                    const reader = new FileReader();
+                    reader.onload = (evt) => { tempConfig.logoUrl = evt.target.result; };
+                    reader.readAsDataURL(file);
+                    
+                    // 同时上传到云端
+                    if (window.uploadFileToSupabase) {
+                        try {
+                            console.log('📤 正在上传 Logo 到云端...');
+                            const result = await window.uploadFileToSupabase(
+                                file, 
+                                `logos/${Date.now()}_${file.name}`, 
+                                'receipts'
+                            );
+                            if (result) {
+                                tempConfig.logoUrl = result.publicUrl;
+                                console.log('✅ Logo 已上传到云端:', result.publicUrl);
+                            }
+                        } catch(e) {
+                            console.warn('⚠️  Logo 云端上传失败，使用本地预览', e);
+                        }
+                    }
+                };
+
+                const handleSealUpload = async (e) => {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    
+                    // 先显示本地预览（立即反馈）
+                    const reader = new FileReader();
+                    reader.onload = (evt) => { tempConfig.sealUrl = evt.target.result; };
+                    reader.readAsDataURL(file);
+                    
+                    // 同时上传到云端
+                    if (window.uploadFileToSupabase) {
+                        try {
+                            console.log('📤 正在上传印章 Logo 到云端...');
+                            const result = await window.uploadFileToSupabase(
+                                file, 
+                                `seals/${Date.now()}_${file.name}`, 
+                                'receipts'
+                            );
+                            if (result) {
+                                tempConfig.sealUrl = result.publicUrl;
+                                console.log('✅ 印章 Logo 已上传到云端:', result.publicUrl);
+                            }
+                        } catch(e) {
+                            console.warn('⚠️  印章 Logo 云端上传失败，使用本地预览', e);
+                        }
+                    }
+                };
+
+                const addOption = () => {
+                    tempConfig.membershipOptions.push({ label: '', price: 0 });
+                };
+
+                const removeOption = (idx) => {
+                    tempConfig.membershipOptions.splice(idx, 1);
+                };
+
+                const saveSettings = async () => {
+                    // Parse handlers
+                    tempConfig.handlers = tempHandlersString.value.split(/[,，\n]/).map(s => s.trim()).filter(s => s);
+                    
+                    // Apply to main config
+                    Object.assign(config, JSON.parse(JSON.stringify(tempConfig)));
+                    
+                    // 保存到本地（立即生效）
+                    localStorage.setItem('plough_receipt_config_v3', JSON.stringify(config));
+                    
+                    // 同时保存到云端
+                    if (window.saveConfigToCloud) {
+                        try {
+                            const cloudConfig = {
+                                app_title: config.appTitle,
+                                brand_name: config.brandName,
+                                brand_sub: config.brandSub,
+                                logo_url: config.logoUrl || '',
+                                seal_url: config.sealUrl || '',
+                                seal_text: config.sealText,
+                                title: config.title,
+                                sub_title: config.subTitle,
+                                intro_text: config.introText,
+                                confirm_text: config.confirmText,
+                                footer_slogan: config.footerSlogan,
+                                membership_options: config.membershipOptions,
+                                handlers: config.handlers
+                            };
+                            
+                            const success = await window.saveConfigToCloud(cloudConfig);
+                            if (success) {
+                                console.log('✅ 配置已同步到云端');
+                            } else {
+                                console.warn('⚠️  云端同步失败，但本地已保存');
+                            }
+                        } catch(e) {
+                            console.error('❌ 云端同步出错:', e);
+                        }
+                    }
+                    
+                    showSettings.value = false;
+                };
+
+                const resetDefaults = () => {
+                    if(confirm('确定要恢复默认设置吗？')) {
+                        Object.assign(tempConfig, JSON.parse(JSON.stringify(defaultConfig)));
+                        tempHandlersString.value = defaultConfig.handlers.join(', ');
+                    }
+                };
+
+
+                // Main App Logic
+                const updateScale = () => {
+                    const previewContainer = document.querySelector('.flex-1.relative');
+                    if (previewContainer) {
+                        const containerWidth = previewContainer.clientWidth;
+                        const targetWidth = 850; 
+                        const scaleX = (containerWidth - 32) / targetWidth; 
+                        const isMobile = window.innerWidth < 768;
+                        
+                        if (isMobile) {
+                            scale.value = scaleX;
+                        } else {
+                            const containerHeight = previewContainer.clientHeight;
+                            const targetHeight = 1200;
+                            const scaleY = (containerHeight - 60) / targetHeight;
+                            scale.value = Math.min(Math.min(scaleX, scaleY), 1);
+                        }
+                    }
+                };
+
+                window.addEventListener('resize', updateScale);
+
+                const form = reactive({
+                    name: '',
+                    phone: '',
+                    type: null,
+                    amount: 0,
+                    date: new Date().toISOString().split('T')[0],
+                    serial: '',
+                    handler: ''
+                });
+
+                const generateSerial = async () => {
+                    // 优先使用云端生成（确保不重复）
+                    if (window.generateNewSerial) {
+                        try {
+                            const serial = await window.generateNewSerial(form.name || '', form.amount || 0);
+                            form.serial = serial;
+                            console.log('✅ 使用云端生成流水编号:', serial);
+                            return;
+                        } catch(e) {
+                            console.warn('⚠️  云端生成失败，使用本地生成', e);
+                        }
+                    }
+                    
+                    // 备用方案：本地生成（仅在云端失败时使用）
+                    const year = new Date().getFullYear();
+                    const randomNum = Math.floor(1000 + Math.random() * 9000);
+                    form.serial = `${year}-N-${randomNum}`;
+                    console.log('📝 使用本地生成流水编号:', form.serial);
+                };
+
+                const formattedAmount = computed(() => {
+                    return form.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                });
+
+                const onTypeChange = () => {
+                    if (form.type && form.type.price) {
+                        form.amount = form.type.price;
+                    }
+                };
+
+                // Enhanced Capture Function using Cloning
+                // This fixes the "messy" output by capturing an unscaled DOM element.
+                const getCanvas = async () => {
+                    isGenerating.value = true;
+                    const originalElement = document.getElementById('receipt-node');
+                    
+                    // 1. Clone the node
+                    const clone = originalElement.cloneNode(true);
+                    
+                    // 2. Create a hidden container with fixed A4 dimensions (no scaling)
+                    // The container must be in the DOM for html2canvas to render it.
+                    const container = document.createElement('div');
+                    container.style.position = 'absolute';
+                    container.style.top = '-9999px';
+                    container.style.left = '-9999px';
+                    container.style.width = '794px';
+                    container.style.height = '1123px';
+                    container.appendChild(clone);
+                    document.body.appendChild(container);
+                    
+                    try {
+                        // 3. Render the clone
+                        const canvas = await html2canvas(clone, {
+                            scale: 2, // 2x for Retina-like quality
+                            useCORS: true,
+                            backgroundColor: '#FDFBF7',
+                            width: 794,
+                            height: 1123,
+                            windowWidth: 794,
+                            windowHeight: 1123,
+                            logging: false, // Cleaner console for production
+                        });
+                        
+                        // 4. Clean up
+                        document.body.removeChild(container);
+                        return canvas;
+                    } catch(e) {
+                        console.error("Capture failed:", e);
+                        if(document.body.contains(container)) document.body.removeChild(container);
+                        throw e;
+                    }
+                };
+
+                const downloadImage = async () => {
+                    if(!form.name) return alert('请输入客户姓名');
+                    try {
+                        const canvas = await getCanvas();
+                        const link = document.createElement('a');
+                        // Included serial number in filename
+                        link.download = `会员函_${form.name}_${form.serial}_${form.date}.png`;
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    } catch(e) { console.error(e); } 
+                    finally { isGenerating.value = false; }
+                };
+
+                const downloadPDF = async () => {
+                    if(!form.name) return alert('请输入客户姓名');
+                    try {
+                        const canvas = await getCanvas();
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        
+                        const pdf = new jsPDF('p', 'mm', 'a4');
+                        const pdfWidth = 210;
+                        const pdfHeight = 297;
+                        
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                        
+                        // 生成文件名
+                        const fileName = `会员函_${form.name}_${form.serial}_${form.date}.pdf`;
+                        
+                        // 保存到本地
+                        pdf.save(fileName);
+                        
+                        // 同时上传到 Supabase
+                        if (window.uploadPDFToSupabase) {
+                            console.log('🚀 正在上传到 Supabase...');
+                            const pdfBlob = pdf.output('blob');
+                            const uploadResult = await window.uploadPDFToSupabase(pdfBlob, fileName);
+                            
+                            if (uploadResult) {
+                                console.log('✅ PDF 已上传到云端');
+                                console.log('📎 访问地址:', uploadResult.publicUrl);
+                                
+                                // 保存完整的确认函记录到数据库
+                                if (window.saveReceiptRecord) {
+                                    const receiptRecord = {
+                                        serial_number: form.serial,
+                                        customer_name: form.name,
+                                        customer_phone: form.phone || '',
+                                        membership_type: form.type || '未选择',
+                                        membership_label: form.type || '',
+                                        amount: form.amount || 0,
+                                        contract_date: form.date,
+                                        handler_name: form.handler || '',
+                                        pdf_url: uploadResult.publicUrl,
+                                        pdf_path: uploadResult.path,
+                                        pdf_size: pdfBlob.size,
+                                        pdf_generated_at: new Date().toISOString(),
+                                        status: 'active',
+                                        notes: '',
+                                        metadata: {
+                                            brand: config.brandName,
+                                            generated_by: 'web_app'
+                                        }
+                                    };
+                                    
+                                    const saved = await window.saveReceiptRecord(receiptRecord);
+                                    if (saved) {
+                                        console.log('✅ 确认函记录已保存到数据库');
+                                    } else {
+                                        console.warn('⚠️  确认函记录保存失败');
+                                    }
+                                }
+                                
+                                // 可选：显示成功提示
+                                setTimeout(() => {
+                                    alert(`✅ PDF 已生成并上传到云端！\n\n所有信息已保存到数据库\n📎 ${uploadResult.publicUrl}`);
+                                }, 500);
+                            } else {
+                                console.warn('⚠️  云端上传失败，但本地文件已保存');
+                            }
+                        }
+                    } catch(e) { 
+                        console.error('❌ 生成或上传失败:', e); 
+                        alert('生成失败，请重试');
+                    }
+                    finally { isGenerating.value = false; }
+                };
+
+                return {
+                    form,
+                    config,
+                    tempConfig,
+                    tempHandlersString,
+                    showSettings,
+                    isGenerating,
+                    scale,
+                    formattedAmount,
+                    generateSerial,
+                    onTypeChange,
+                    downloadImage,
+                    downloadPDF,
+                    handleLogoUpload,
+                    handleSealUpload,
+                    addOption,
+                    removeOption,
+                    saveSettings,
+                    resetDefaults
+                };
+            }
+        }).mount('#app');
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
