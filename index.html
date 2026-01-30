@@ -121,13 +121,31 @@
                         <h1 class="font-bold text-gray-900 tracking-tight text-lg">{{ config.appTitle || '权益函生成助手' }}</h1>
                         <p class="text-xs text-gray-500 font-medium">{{ config.brandName || '牛耕部落' }}</p>
                     </div>
-                    <!-- Settings Button -->
-                    <button @click="showSettings = true" class="p-2 text-gray-400 hover:text-brand-green transition-colors rounded-full hover:bg-gray-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <!-- User Info -->
+                        <div v-if="currentUser" class="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full">
+                            <span class="text-xs text-gray-600 font-medium">{{ currentUser.display_name || currentUser.username }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded-full" :class="currentUser.role === 'admin' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'">
+                                {{ currentUser.role === 'admin' ? '管理员' : '用户' }}
+                            </span>
+                            <button @click="handleLogout" class="ml-1 text-gray-400 hover:text-red-500 transition-colors" title="登出">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- Login Button -->
+                        <button v-else @click="showLogin = true" class="px-3 py-1.5 text-xs text-gray-600 hover:text-brand-green hover:bg-gray-100 rounded-full transition-colors">
+                            登录
+                        </button>
+                        <!-- Settings Button (Only for Admin) -->
+                        <button v-if="canAccessSettings" @click="showSettings = true" class="p-2 text-gray-400 hover:text-brand-green transition-colors rounded-full hover:bg-gray-100" title="设置">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Form -->
@@ -301,7 +319,7 @@
                                     <!-- The Red Stamp: Automatically Generated and Positioned -->
                                     <div class="absolute -top-8 -right-8 w-36 h-36 pointer-events-none mix-blend-multiply opacity-90 transform -rotate-6 z-20">
                                         <!-- Dynamic SVG Stamp -->
-                                        <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-full text-seal-red fill-current drop-shadow-sm">
+                                        <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-sm">
                                             <defs>
                                                 <!-- Arc path for top text (semi-circle) -->
                                                 <path id="curve" d="M 24,80 A 56,56 0 1,1 136,80" />
@@ -320,12 +338,12 @@
                                                 </filter>
                                             </defs>
                                             
-                                            <!-- Outer Rings -->
-                                            <circle cx="80" cy="80" r="76" stroke="currentColor" stroke-width="4" fill="none" />
-                                            <circle cx="80" cy="80" r="72" stroke="currentColor" stroke-width="1" fill="none" />
+                                            <!-- Outer Rings - 使用统一的红色 #df2a10 -->
+                                            <circle cx="80" cy="80" r="76" stroke="#df2a10" stroke-width="4" fill="none" />
+                                            <circle cx="80" cy="80" r="72" stroke="#df2a10" stroke-width="1" fill="none" />
                                             
-                                            <!-- Curved Brand Name -->
-                                            <text font-size="14" font-weight="bold" letter-spacing="2" class="font-serif-sc">
+                                            <!-- Curved Brand Name - 使用统一的红色 #df2a10 -->
+                                            <text font-size="14" font-weight="bold" letter-spacing="2" fill="#df2a10" class="font-serif-sc">
                                                 <textPath xlink:href="#curve" startOffset="50%" text-anchor="middle">
                                                     {{ config.brandName }}
                                                 </textPath>
@@ -334,11 +352,11 @@
                                             <!-- Center Logo (User Uploaded) -->
                                             <!-- Use SVG filter for exact color matching -->
                                             <image v-if="config.sealUrl" :href="config.sealUrl" x="50" y="45" width="60" height="60" filter="url(#redInkFilter)" />
-                                            <!-- Fallback Star if no logo -->
-                                            <text v-else x="80" y="85" font-size="40" text-anchor="middle" dominant-baseline="middle">★</text>
+                                            <!-- Fallback Star if no logo - 使用统一的红色 #df2a10 -->
+                                            <text v-else x="80" y="85" font-size="40" text-anchor="middle" dominant-baseline="middle" fill="#df2a10">★</text>
 
-                                            <!-- Bottom Text "专用章" -->
-                                            <text x="80" y="115" font-size="12" font-weight="bold" text-anchor="middle" class="font-serif-sc tracking-[0.3em]">{{ config.sealText }}</text>
+                                            <!-- Bottom Text "专用章" - 使用统一的红色 #df2a10 -->
+                                            <text x="80" y="115" font-size="12" font-weight="bold" text-anchor="middle" fill="#df2a10" class="font-serif-sc tracking-[0.3em]">{{ config.sealText }}</text>
                                         </svg>
                                     </div>
                                 </div>
@@ -362,7 +380,7 @@
 
                         <!-- Footer Area -->
                         <div class="mt-auto relative">
-                            <div class="flex justify-between items-end mb-16">
+                            <div class="flex justify-between items-center mb-20">
                                 <div class="text-center">
                                     <p class="text-xs text-gray-400 uppercase tracking-widest mb-6">经办人签名 (Signature)</p>
                                     <div class="border-b border-gray-300 pb-2 px-8 font-serif text-xl text-gray-800 min-w-[150px]">
@@ -371,7 +389,7 @@
                                     <p class="text-xs text-gray-300 mt-2">经办人签字</p>
                                 </div>
 
-                                <div class="text-right pb-4">
+                                <div class="text-right">
                                     <h3 class="text-2xl font-bold text-brand-green tracking-widest">{{ config.brandName }}</h3>
                                     <p class="text-xs text-brand-gold uppercase tracking-[0.2em] mt-1">{{ config.brandSub }}</p>
                                 </div>
@@ -381,7 +399,7 @@
                             <div class="border-b border-gray-200 mb-8"></div>
                             
                             <!-- Bottom Text -->
-                            <div class="text-center text-[10px] text-gray-400 uppercase tracking-[0.3em] pt-2">
+                            <div class="text-center text-[10px] text-gray-400 uppercase tracking-[0.3em] pt-2 pb-8">
                                 {{ config.footerSlogan }}
                             </div>
                         </div>
@@ -525,6 +543,64 @@
             </div>
         </div>
 
+        <!-- LOGIN MODAL -->
+        <div v-if="showLogin" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                <!-- Modal Header -->
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h2 class="text-xl font-bold text-gray-800">用户登录</h2>
+                    <button @click="showLogin = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-4">
+                    <div v-if="loginError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                        {{ loginError }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+                        <input 
+                            type="text" 
+                            v-model="loginForm.username" 
+                            @keyup.enter="handleLogin"
+                            class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-xl px-4 py-3 text-sm font-medium transition-all outline-none placeholder-gray-400"
+                            placeholder="请输入用户名"
+                            autocomplete="username"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+                        <input 
+                            type="password" 
+                            v-model="loginForm.password" 
+                            @keyup.enter="handleLogin"
+                            class="w-full bg-gray-50 border-2 border-transparent focus:bg-white focus:border-brand-green/30 rounded-xl px-4 py-3 text-sm font-medium transition-all outline-none placeholder-gray-400"
+                            placeholder="请输入密码"
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <div class="pt-2 text-xs text-gray-500 space-y-1">
+                        <p>默认账号：</p>
+                        <p>管理员：admin / admin123</p>
+                        <p>普通用户：user / user123</p>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                    <button @click="showLogin = false" class="px-6 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">取消</button>
+                    <button @click="handleLogin" :disabled="isLoggingIn" class="px-6 py-2 text-sm bg-brand-green text-white rounded-lg hover:bg-[#1e3e2a] transition-colors shadow-lg shadow-green-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {{ isLoggingIn ? '登录中...' : '登录' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -558,6 +634,14 @@
                 const isGenerating = ref(false);
                 const scale = ref(1);
                 const showSettings = ref(false);
+                const showLogin = ref(false);
+                const currentUser = ref(null);
+                const isLoggingIn = ref(false);
+                const loginError = ref('');
+                const loginForm = reactive({
+                    username: '',
+                    password: ''
+                });
                 
                 // Reactive Config State
                 const config = reactive(JSON.parse(JSON.stringify(defaultConfig)));
@@ -566,11 +650,8 @@
                 const tempConfig = reactive(JSON.parse(JSON.stringify(defaultConfig)));
                 const tempHandlersString = ref("");
 
-                // Load Settings from Cloud (优先) or LocalStorage (备用)
-                onMounted(async () => {
-                    let configLoaded = false;
-                    
-                    // 尝试从云端加载配置
+                // 加载用户配置的函数
+                const loadUserConfig = async () => {
                     if (window.loadConfigFromCloud) {
                         try {
                             const cloudConfig = await window.loadConfigFromCloud();
@@ -591,7 +672,112 @@
                                     membershipOptions: cloudConfig.membership_options,
                                     handlers: cloudConfig.handlers
                                 });
-                                console.log('✅ 已从云端加载配置');
+                                console.log('✅ 已从云端加载用户配置');
+                                return true;
+                            }
+                        } catch(e) {
+                            console.warn('⚠️  云端配置加载失败', e);
+                        }
+                    }
+                    return false;
+                };
+
+                // 登录相关方法
+                const handleLogin = async () => {
+                    if (!loginForm.username || !loginForm.password) {
+                        loginError.value = '请输入用户名和密码';
+                        return;
+                    }
+
+                    isLoggingIn.value = true;
+                    loginError.value = '';
+
+                    try {
+                        if (window.login) {
+                            const result = await window.login({
+                                username: loginForm.username,
+                                password: loginForm.password
+                            });
+
+                            if (result.success && result.user) {
+                                currentUser.value = result.user;
+                                showLogin.value = false;
+                                loginForm.username = '';
+                                loginForm.password = '';
+                                loginError.value = '';
+                                
+                                // 登录成功后重新加载该用户的配置
+                                await loadUserConfig();
+                            } else {
+                                loginError.value = result.error || '登录失败';
+                            }
+                        } else {
+                            loginError.value = '登录功能未加载，请刷新页面重试';
+                        }
+                    } catch (error) {
+                        console.error('登录出错:', error);
+                        loginError.value = '登录失败，请稍后重试';
+                    } finally {
+                        isLoggingIn.value = false;
+                    }
+                };
+
+                const handleLogout = () => {
+                    if (confirm('确定要登出吗？')) {
+                        if (window.logout) {
+                            window.logout();
+                        }
+                        currentUser.value = null;
+                        showLogin.value = true;
+                    }
+                };
+
+                // 检查权限
+                const canAccessSettings = computed(() => {
+                    if (!currentUser.value) return false;
+                    if (window.canAccessSettings) {
+                        return window.canAccessSettings();
+                    }
+                    return currentUser.value.role === 'admin';
+                });
+
+                // Load Settings from Cloud (优先) or LocalStorage (备用)
+                onMounted(async () => {
+                    // 检查登录状态
+                    if (window.getCurrentUser) {
+                        const user = window.getCurrentUser();
+                        if (user) {
+                            currentUser.value = user;
+                        } else {
+                            // 未登录，显示登录界面
+                            showLogin.value = true;
+                        }
+                    }
+
+                    let configLoaded = false;
+                    
+                    // 尝试从云端加载配置（如果已登录）
+                    if (currentUser.value && window.loadConfigFromCloud) {
+                        try {
+                            const cloudConfig = await window.loadConfigFromCloud();
+                            if (cloudConfig) {
+                                // 映射云端配置到应用配置
+                                Object.assign(config, {
+                                    appTitle: cloudConfig.app_title,
+                                    brandName: cloudConfig.brand_name,
+                                    brandSub: cloudConfig.brand_sub,
+                                    logoUrl: cloudConfig.logo_url,
+                                    sealUrl: cloudConfig.seal_url,
+                                    sealText: cloudConfig.seal_text,
+                                    title: cloudConfig.title,
+                                    subTitle: cloudConfig.sub_title,
+                                    introText: cloudConfig.intro_text,
+                                    confirmText: cloudConfig.confirm_text,
+                                    footerSlogan: cloudConfig.footer_slogan,
+                                    membershipOptions: cloudConfig.membership_options,
+                                    handlers: cloudConfig.handlers
+                                });
+                                console.log('✅ 已从云端加载用户配置');
                                 configLoaded = true;
                             }
                         } catch(e) {
@@ -820,6 +1006,11 @@
                     // 1. Clone the node
                     const clone = originalElement.cloneNode(true);
                     
+                    // 确保克隆元素的背景是白色（用于导出）
+                    if (clone instanceof HTMLElement) {
+                        clone.style.backgroundColor = '#FFFFFF';
+                    }
+                    
                     // 2. Create a hidden container with fixed A4 dimensions (no scaling)
                     // The container must be in the DOM for html2canvas to render it.
                     const container = document.createElement('div');
@@ -828,6 +1019,7 @@
                     container.style.left = '-9999px';
                     container.style.width = '794px';
                     container.style.height = '1123px';
+                    container.style.backgroundColor = '#FFFFFF'; // 确保容器背景是白色
                     container.appendChild(clone);
                     document.body.appendChild(container);
                     
@@ -836,7 +1028,7 @@
                         const canvas = await html2canvas(clone, {
                             scale: 2, // 2x for Retina-like quality
                             useCORS: true,
-                            backgroundColor: '#FDFBF7',
+                            backgroundColor: '#FFFFFF', // 改为纯白色背景
                             width: 794,
                             height: 1123,
                             windowWidth: 794,
@@ -1036,6 +1228,12 @@
                     tempConfig,
                     tempHandlersString,
                     showSettings,
+                    showLogin,
+                    currentUser,
+                    loginForm,
+                    isLoggingIn,
+                    loginError,
+                    canAccessSettings,
                     isGenerating,
                     scale,
                     formattedAmount,
@@ -1048,7 +1246,9 @@
                     addOption,
                     removeOption,
                     saveSettings,
-                    resetDefaults
+                    resetDefaults,
+                    handleLogin,
+                    handleLogout
                 };
             }
         }).mount('#app');

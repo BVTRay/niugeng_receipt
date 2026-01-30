@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS app_configs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
+-- 创建索引以提高查询性能
+CREATE INDEX IF NOT EXISTS idx_app_configs_user_id ON app_configs(user_id);
+
 -- 2. 流水编号记录表
 CREATE TABLE IF NOT EXISTS serial_numbers (
     id BIGSERIAL PRIMARY KEY,

@@ -17,6 +17,14 @@ import {
   updateReceiptStatus,
   getReceiptStatistics
 } from './lib/supabase-database';
+import {
+  login,
+  logout,
+  getCurrentUser,
+  isAuthenticated,
+  isAdmin,
+  canAccessSettings
+} from './lib/supabase-auth';
 
 // 将函数挂载到 window 对象，供 Vue 应用使用
 (window as any).uploadPDFToSupabase = uploadPDFToSupabase;
@@ -33,5 +41,13 @@ import {
 (window as any).updateReceiptStatus = updateReceiptStatus;
 (window as any).getReceiptStatistics = getReceiptStatistics;
 
-console.log('✅ Supabase 功能已加载（PDF上传、配置同步、流水编号、确认函记录）');
+// 认证相关函数
+(window as any).login = login;
+(window as any).logout = logout;
+(window as any).getCurrentUser = getCurrentUser;
+(window as any).isAuthenticated = isAuthenticated;
+(window as any).isAdmin = isAdmin;
+(window as any).canAccessSettings = canAccessSettings;
+
+console.log('✅ Supabase 功能已加载（PDF上传、配置同步、流水编号、确认函记录、用户认证）');
 

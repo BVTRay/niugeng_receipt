@@ -34,13 +34,24 @@ export async function saveConfigToCloud(config: AppConfig): Promise<boolean> {
   try {
     console.log('💾 正在保存配置到云端...');
     
-    // 使用固定的配置 ID（每个用户只有一个配置）
-    const configId = 'default-config';
+    // 获取当前登录用户
+    const { getCurrentUser } = await import('./supabase-auth');
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser) {
+      console.error('❌ 未登录，无法保存配置');
+      return false;
+    }
+    
+    // 使用用户 ID 作为配置 ID（每个用户只有一个配置）
+    const configId = `user-${currentUser.id}`;
+    const userId = currentUser.id.toString();
     
     const { data, error } = await supabase
       .from('app_configs')
       .upsert({
         id: configId,
+        user_id: userId,
         app_title: config.app_title,
         brand_name: config.brand_name,
         brand_sub: config.brand_sub,
@@ -64,7 +75,7 @@ export async function saveConfigToCloud(config: AppConfig): Promise<boolean> {
       return false;
     }
 
-    console.log('✅ 配置已保存到云端');
+    console.log('✅ 配置已保存到云端（用户:', currentUser.username, ')');
     return true;
   } catch (error) {
     console.error('❌ 保存配置过程出错:', error);
@@ -79,17 +90,39 @@ export async function loadConfigFromCloud(): Promise<AppConfig | null> {
   try {
     console.log('📥 正在从云端加载配置...');
     
-    const configId = 'default-config';
+    // 获取当前登录用户
+    const { getCurrentUser } = await import('./supabase-auth');
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser) {
+      console.log('📝 未登录，无法加载云端配置');
+      return null;
+    }
+    
+    // 使用用户 ID 查找配置
+    const userId = currentUser.id.toString();
     
     const { data, error } = await supabase
       .from('app_configs')
       .select('*')
-      .eq('id', configId)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // 记录不存在
+        // 记录不存在，尝试加载默认配置（兼容旧数据）
+        console.log('📝 用户配置不存在，尝试加载默认配置...');
+        const { data: defaultData, error: defaultError } = await supabase
+          .from('app_configs')
+          .select('*')
+          .eq('id', 'default-config')
+          .single();
+        
+        if (!defaultError && defaultData) {
+          console.log('✅ 已加载默认配置');
+          return defaultData as AppConfig;
+        }
+        
         console.log('📝 云端暂无配置，使用默认配置');
         return null;
       }
@@ -97,7 +130,7 @@ export async function loadConfigFromCloud(): Promise<AppConfig | null> {
       return null;
     }
 
-    console.log('✅ 配置已从云端加载');
+    console.log('✅ 配置已从云端加载（用户:', currentUser.username, ')');
     return data as AppConfig;
   } catch (error) {
     console.error('❌ 加载配置过程出错:', error);
@@ -156,31 +189,36 @@ export interface ReceiptRecord {
 
 /**
  * 生成新的流水编号（自动递增，不重复）
+ * 每年从 0001 开始
  */
 export async function generateNewSerial(customerName: string = '', amount: number = 0): Promise<string> {
   try {
     const year = new Date().getFullYear();
     
-    // 查询今年的最大流水编号
+    // 查询今年的所有流水编号
     const { data, error } = await supabase
       .from('serial_numbers')
       .select('serial_number')
-      .like('serial_number', `${year}-N-%`)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .like('serial_number', `${year}-N-%`);
 
     let nextNumber = 1;
     
     if (data && data.length > 0) {
-      // 从最后一个流水编号中提取数字部分
-      const lastSerial = data[0].serial_number;
-      const match = lastSerial.match(/(\d+)$/);
-      if (match) {
-        nextNumber = parseInt(match[1]) + 1;
+      // 提取所有流水号的数字部分，找到最大值
+      const numbers = data
+        .map(item => {
+          const match = item.serial_number.match(/(\d+)$/);
+          return match ? parseInt(match[1]) : 0;
+        })
+        .filter(num => num > 0);
+      
+      if (numbers.length > 0) {
+        const maxNumber = Math.max(...numbers);
+        nextNumber = maxNumber + 1;
       }
     }
 
-    // 生成新的流水编号（4位数字，不足补0）
+    // 生成新的流水编号（4位数字，不足补0，从0001开始）
     const serialNumber = `${year}-N-${String(nextNumber).padStart(4, '0')}`;
     
     // 保存到数据库
@@ -194,7 +232,13 @@ export async function generateNewSerial(customerName: string = '', amount: numbe
 
     if (insertError) {
       console.error('❌ 流水编号保存失败:', insertError);
-      // 如果保存失败，使用时间戳作为备用方案
+      // 如果保存失败，可能是重复，尝试重新生成
+      if (insertError.code === '23505') { // 唯一约束冲突
+        console.warn('⚠️ 流水编号冲突，尝试重新生成...');
+        // 递归调用，但限制次数避免无限循环
+        return await generateNewSerial(customerName, amount);
+      }
+      // 其他错误，使用时间戳作为备用方案
       const timestamp = Date.now().toString().slice(-4);
       return `${year}-N-${timestamp}`;
     }
