@@ -105,3 +105,4 @@ INSERT INTO app_configs (
 -- - 流水编号格式：YYYY-N-XXXX (年份-N-四位数字)
 -- - 配置 ID 固定为 'default-config'，支持多用户时可改为用户ID
 
+

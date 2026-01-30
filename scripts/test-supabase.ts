@@ -13,7 +13,7 @@ console.log('\n🔍 开始测试 Supabase 连接...\n');
 
 async function testConnection() {
   // 动态导入 Supabase 客户端（确保环境变量已加载）
-  const { supabase } = await import('./supabase-client.js');
+  const { supabase } = await import('../src/lib/supabase-client.js');
   
   // 测试 1: 基础连接
   console.log('📡 测试 1: 验证基础连接');

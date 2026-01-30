@@ -3,8 +3,8 @@
  * 导出 Supabase 功能供 index.html 使用
  */
 
-import { uploadPDFToSupabase } from './supabase-pdf-uploader';
-import { uploadFile } from './supabase-storage';
+import { uploadPDFToSupabase } from './lib/supabase-pdf-uploader';
+import { uploadFile, uploadBase64Image } from './lib/supabase-storage';
 import { 
   saveConfigToCloud, 
   loadConfigFromCloud, 
@@ -16,11 +16,12 @@ import {
   searchReceipts,
   updateReceiptStatus,
   getReceiptStatistics
-} from './supabase-database';
+} from './lib/supabase-database';
 
 // 将函数挂载到 window 对象，供 Vue 应用使用
 (window as any).uploadPDFToSupabase = uploadPDFToSupabase;
 (window as any).uploadFileToSupabase = uploadFile;
+(window as any).uploadBase64Image = uploadBase64Image;
 (window as any).saveConfigToCloud = saveConfigToCloud;
 (window as any).loadConfigFromCloud = loadConfigFromCloud;
 (window as any).generateNewSerial = generateNewSerial;

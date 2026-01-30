@@ -1,20 +1,88 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 牛耕部落 - 会员权益确认函生成器
 
-# Run and deploy your AI Studio app
+专为牛耕部落销售团队设计的会员权益确认函生成工具，支持在线生成、预览及导出高清图片。
 
-This contains everything you need to run your app locally.
+## 📁 项目结构
 
-View your app in AI Studio: https://ai.studio/apps/drive/1yn-u0_TWYVz49Vxcb4phJumcPaG3jBDq
+```
+├── src/                    # 源代码目录
+│   ├── index.tsx          # 主应用入口
+│   └── lib/               # 核心库文件
+│       ├── supabase-client.ts      # Supabase 客户端配置
+│       ├── supabase-database.ts    # 数据库操作
+│       ├── supabase-pdf-uploader.ts # PDF 上传功能
+│       └── supabase-storage.ts     # 文件存储功能
+├── docs/                   # 文档目录
+│   ├── README.md          # 详细文档
+│   ├── QUICK_START.md     # 快速开始指南
+│   ├── SETUP_DATABASE.md  # 数据库设置指南
+│   └── ...                # 其他文档
+├── scripts/               # 工具脚本
+│   ├── test-*.ts         # 测试脚本
+│   ├── check-tables.ts   # 数据库表检查
+│   └── setup-env.cjs     # 环境配置脚本
+├── sql/                   # SQL 脚本
+│   ├── supabase-schema.sql        # 数据库架构
+│   └── supabase-schema-upgrade.sql # 架构升级脚本
+├── index.html             # 主 HTML 文件
+└── package.json          # 项目配置
+```
 
-## Run Locally
+## 🚀 快速开始
 
-**Prerequisites:**  Node.js
+1. **安装依赖**
+   ```bash
+   npm install
+   ```
 
+2. **配置环境变量**
+   ```bash
+   npm run setup:env
+   ```
+   或手动创建 `.env` 文件，配置 Supabase 相关变量。
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. **启动开发服务器**
+   ```bash
+   npm run dev
+   ```
+
+4. **访问应用**
+   打开浏览器访问 `http://localhost:3000`
+
+## 📖 详细文档
+
+更多详细信息请查看 [docs/README.md](./docs/README.md)
+
+## 🛠️ 可用脚本
+
+- `npm run dev` - 启动开发服务器
+- `npm run build` - 构建生产版本
+- `npm run preview` - 预览生产构建
+- `npm run setup:env` - 配置环境变量
+- `npm run test:supabase` - 测试 Supabase 连接
+- `npm run test:database` - 测试数据库功能
+- `npm run test:receipts` - 测试确认函记录功能
+- `npm run check:tables` - 检查数据库表
+
+## 📝 功能特性
+
+- ✅ 在线生成会员权益确认函
+- ✅ 支持 PNG 和 PDF 导出
+- ✅ 云端配置同步
+- ✅ 流水编号自动生成和管理
+- ✅ 确认函记录保存和查询
+- ✅ 自动上传到 Supabase 存储
+
+## 🔧 技术栈
+
+- Vue 3 (选项式 API)
+- TypeScript
+- Vite
+- Supabase (数据库和存储)
+- Tailwind CSS
+- html2canvas & jsPDF
+
+## 📄 许可证
+
+私有项目
+

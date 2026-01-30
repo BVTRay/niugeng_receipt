@@ -9,13 +9,13 @@
 import { config } from 'dotenv';
 config();
 
-import type { AppConfig } from './supabase-database';
+import type { AppConfig } from '../src/lib/supabase-database';
 
 console.log('\n🧪 开始测试数据库功能...\n');
 
 async function testConfigSync() {
   // 动态导入数据库函数
-  const { saveConfigToCloud, loadConfigFromCloud } = await import('./supabase-database.js');
+  const { saveConfigToCloud, loadConfigFromCloud } = await import('../src/lib/supabase-database.js');
   console.log('📋 测试 1: 配置云端同步');
   
   try {
@@ -75,7 +75,7 @@ async function testSerialGeneration() {
   console.log('\n📋 测试 2: 流水编号生成');
   
   // 动态导入数据库函数
-  const { generateNewSerial, checkSerialExists } = await import('./supabase-database.js');
+  const { generateNewSerial, checkSerialExists } = await import('../src/lib/supabase-database.js');
   
   try {
     // 生成多个流水编号
@@ -124,7 +124,7 @@ async function testRecentRecords() {
   console.log('\n📋 测试 3: 查询最近记录');
   
   // 动态导入数据库函数
-  const { getRecentSerials } = await import('./supabase-database.js');
+  const { getRecentSerials } = await import('../src/lib/supabase-database.js');
   
   try {
     const recentSerials = await getRecentSerials(5);

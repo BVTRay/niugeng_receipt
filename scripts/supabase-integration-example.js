@@ -9,7 +9,7 @@
 
 // 修改 index.html 中的 downloadImage 方法
 /*
-import { uploadBase64Image } from './supabase-storage';
+import { uploadBase64Image } from '../src/lib/supabase-storage';
 
 const downloadImage = async () => {
     if(!form.name) return alert('请输入客户姓名');
@@ -67,7 +67,7 @@ const downloadImage = async () => {
 
 然后添加方法：
 
-import { uploadBase64Image } from './supabase-storage';
+import { uploadBase64Image } from '../src/lib/supabase-storage';
 
 const uploadToCloud = async () => {
     if(!form.name) return alert('请输入客户姓名');
@@ -100,7 +100,7 @@ const uploadToCloud = async () => {
 // ============================================
 
 /*
-import { listFiles, getPublicUrl } from './supabase-storage';
+import { listFiles, getPublicUrl } from '../src/lib/supabase-storage';
 
 // 添加到 Vue setup 中
 const uploadedFiles = ref([]);
@@ -126,7 +126,7 @@ onMounted(() => {
 // ============================================
 
 /*
-import { deleteFiles } from './supabase-storage';
+import { deleteFiles } from '../src/lib/supabase-storage';
 
 const deleteFile = async (filePath) => {
     if (!confirm('确定要删除这个文件吗？')) return;
@@ -180,4 +180,5 @@ const uploadWithCustomerFolder = async (base64Data, customerName, fileName) => {
 */
 
 export default {};
+
 

@@ -637,9 +637,14 @@
                     if (window.uploadFileToSupabase) {
                         try {
                             console.log('📤 正在上传 Logo 到云端...');
+                            // 生成安全的文件名，避免中文字符问题
+                            const timestamp = Date.now();
+                            const random = Math.random().toString(36).substring(2, 8);
+                            const ext = file.name.substring(file.name.lastIndexOf('.'));
+                            const safeFileName = `${timestamp}_${random}${ext}`;
                             const result = await window.uploadFileToSupabase(
                                 file, 
-                                `logos/${Date.now()}_${file.name}`, 
+                                `logos/${safeFileName}`, 
                                 'receipts'
                             );
                             if (result) {
@@ -665,9 +670,14 @@
                     if (window.uploadFileToSupabase) {
                         try {
                             console.log('📤 正在上传印章 Logo 到云端...');
+                            // 生成安全的文件名，避免中文字符问题
+                            const timestamp = Date.now();
+                            const random = Math.random().toString(36).substring(2, 8);
+                            const ext = file.name.substring(file.name.lastIndexOf('.'));
+                            const safeFileName = `${timestamp}_${random}${ext}`;
                             const result = await window.uploadFileToSupabase(
                                 file, 
-                                `seals/${Date.now()}_${file.name}`, 
+                                `seals/${safeFileName}`, 
                                 'receipts'
                             );
                             if (result) {
@@ -847,19 +857,90 @@
                 const downloadImage = async () => {
                     if(!form.name) return alert('请输入客户姓名');
                     try {
+                        // 在生成前先更新流水号，确保每次生成都是新记录
+                        await generateSerial();
+                        
                         const canvas = await getCanvas();
+                        const base64Data = canvas.toDataURL('image/png');
+                        
+                        // 生成文件名
+                        const fileName = `会员函_${form.name}_${form.serial}_${form.date}.png`;
+                        
+                        // 下载到本地
                         const link = document.createElement('a');
-                        // Included serial number in filename
-                        link.download = `会员函_${form.name}_${form.serial}_${form.date}.png`;
-                        link.href = canvas.toDataURL('image/png');
+                        link.download = fileName;
+                        link.href = base64Data;
                         link.click();
-                    } catch(e) { console.error(e); } 
+                        
+                        // 同时上传到云端并保存记录
+                        let imageUrl = '';
+                        let imagePath = '';
+                        
+                        if (window.uploadBase64Image) {
+                            console.log('🚀 正在上传图片到云端...');
+                            const uploadResult = await window.uploadBase64Image(base64Data, fileName);
+                            
+                            if (uploadResult) {
+                                imageUrl = uploadResult.publicUrl;
+                                imagePath = uploadResult.path;
+                                console.log('✅ 图片已上传到云端');
+                                console.log('📎 访问地址:', imageUrl);
+                            } else {
+                                console.warn('⚠️  图片上传失败，但本地文件已保存');
+                            }
+                        }
+                        
+                        // 保存记录到数据库（无论上传成功与否）
+                        if (window.saveReceiptRecord) {
+                            const receiptRecord = {
+                                serial_number: form.serial,
+                                customer_name: form.name,
+                                customer_phone: form.phone || '',
+                                membership_type: form.type?.label || '未选择',
+                                membership_label: form.type?.label || '',
+                                amount: form.amount || 0,
+                                contract_date: form.date,
+                                handler_name: form.handler || '',
+                                pdf_url: '', // 图片模式，PDF URL 为空
+                                pdf_path: '', // 图片模式，PDF 路径为空
+                                pdf_size: 0,
+                                pdf_generated_at: new Date().toISOString(),
+                                status: 'active',
+                                notes: '',
+                                metadata: {
+                                    brand: config.brandName,
+                                    generated_by: 'web_app',
+                                    file_type: 'image',
+                                    image_url: imageUrl, // 图片 URL 保存在 metadata 中
+                                    image_path: imagePath
+                                }
+                            };
+                            
+                            const saved = await window.saveReceiptRecord(receiptRecord);
+                            if (saved) {
+                                console.log('✅ 确认函记录已保存到数据库');
+                                if (imageUrl) {
+                                    setTimeout(() => {
+                                        alert(`✅ 图片已生成并上传到云端！\n\n所有信息已保存到数据库\n📎 ${imageUrl}`);
+                                    }, 500);
+                                }
+                            } else {
+                                console.warn('⚠️  确认函记录保存失败');
+                            }
+                        }
+                    } catch(e) { 
+                        console.error('❌ 生成或上传失败:', e); 
+                        alert('生成失败，请重试');
+                    }
                     finally { isGenerating.value = false; }
                 };
 
                 const downloadPDF = async () => {
                     if(!form.name) return alert('请输入客户姓名');
                     try {
+                        // 在生成前先更新流水号，确保每次生成都是新记录
+                        await generateSerial();
+                        
                         const canvas = await getCanvas();
                         const imgData = canvas.toDataURL('image/jpeg', 0.95);
                         
@@ -876,52 +957,70 @@
                         pdf.save(fileName);
                         
                         // 同时上传到 Supabase
+                        const pdfBlob = pdf.output('blob');
+                        let pdfUrl = '';
+                        let pdfPath = '';
+                        let uploadSuccess = false;
+                        
                         if (window.uploadPDFToSupabase) {
                             console.log('🚀 正在上传到 Supabase...');
-                            const pdfBlob = pdf.output('blob');
                             const uploadResult = await window.uploadPDFToSupabase(pdfBlob, fileName);
                             
                             if (uploadResult) {
+                                pdfUrl = uploadResult.publicUrl;
+                                pdfPath = uploadResult.path;
+                                uploadSuccess = true;
                                 console.log('✅ PDF 已上传到云端');
-                                console.log('📎 访问地址:', uploadResult.publicUrl);
-                                
-                                // 保存完整的确认函记录到数据库
-                                if (window.saveReceiptRecord) {
-                                    const receiptRecord = {
-                                        serial_number: form.serial,
-                                        customer_name: form.name,
-                                        customer_phone: form.phone || '',
-                                        membership_type: form.type || '未选择',
-                                        membership_label: form.type || '',
-                                        amount: form.amount || 0,
-                                        contract_date: form.date,
-                                        handler_name: form.handler || '',
-                                        pdf_url: uploadResult.publicUrl,
-                                        pdf_path: uploadResult.path,
-                                        pdf_size: pdfBlob.size,
-                                        pdf_generated_at: new Date().toISOString(),
-                                        status: 'active',
-                                        notes: '',
-                                        metadata: {
-                                            brand: config.brandName,
-                                            generated_by: 'web_app'
-                                        }
-                                    };
-                                    
-                                    const saved = await window.saveReceiptRecord(receiptRecord);
-                                    if (saved) {
-                                        console.log('✅ 确认函记录已保存到数据库');
-                                    } else {
-                                        console.warn('⚠️  确认函记录保存失败');
-                                    }
-                                }
-                                
-                                // 可选：显示成功提示
-                                setTimeout(() => {
-                                    alert(`✅ PDF 已生成并上传到云端！\n\n所有信息已保存到数据库\n📎 ${uploadResult.publicUrl}`);
-                                }, 500);
+                                console.log('📎 访问地址:', pdfUrl);
                             } else {
                                 console.warn('⚠️  云端上传失败，但本地文件已保存');
+                            }
+                        }
+                        
+                        // 保存完整的确认函记录到数据库（无论上传成功与否）
+                        if (window.saveReceiptRecord) {
+                            const receiptRecord = {
+                                serial_number: form.serial,
+                                customer_name: form.name,
+                                customer_phone: form.phone || '',
+                                membership_type: form.type?.label || '未选择',
+                                membership_label: form.type?.label || '',
+                                amount: form.amount || 0,
+                                contract_date: form.date,
+                                handler_name: form.handler || '',
+                                pdf_url: pdfUrl,
+                                pdf_path: pdfPath,
+                                pdf_size: pdfBlob.size,
+                                pdf_generated_at: new Date().toISOString(),
+                                status: 'active',
+                                notes: '',
+                                metadata: {
+                                    brand: config.brandName,
+                                    generated_by: 'web_app',
+                                    file_type: 'pdf',
+                                    upload_success: uploadSuccess
+                                }
+                            };
+                            
+                            const saved = await window.saveReceiptRecord(receiptRecord);
+                            if (saved) {
+                                console.log('✅ 确认函记录已保存到数据库');
+                                if (uploadSuccess) {
+                                    setTimeout(() => {
+                                        alert(`✅ PDF 已生成并上传到云端！\n\n所有信息已保存到数据库\n📎 ${pdfUrl}`);
+                                    }, 500);
+                                } else {
+                                    setTimeout(() => {
+                                        alert(`✅ PDF 已生成并保存到本地！\n\n记录已保存到数据库（云端上传失败）`);
+                                    }, 500);
+                                }
+                            } else {
+                                console.warn('⚠️  确认函记录保存失败');
+                                if (uploadSuccess) {
+                                    setTimeout(() => {
+                                        alert(`✅ PDF 已生成并上传到云端！\n\n⚠️  但数据库保存失败`);
+                                    }, 500);
+                                }
                             }
                         }
                     } catch(e) { 
@@ -954,6 +1053,6 @@
             }
         }).mount('#app');
     </script>
-<script type="module" src="/index.tsx"></script>
+<script type="module" src="/src/index.tsx"></script>
 </body>
 </html>

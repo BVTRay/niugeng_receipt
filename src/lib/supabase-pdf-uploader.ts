@@ -12,6 +12,22 @@ import { supabase } from './supabase-client';
  * @param bucketName 存储桶名称
  * @returns 上传结果
  */
+/**
+ * 生成安全的文件名
+ * 使用时间戳和随机字符串，避免中文字符和特殊字符导致的问题
+ */
+function generateSafeFileName(originalFileName: string): string {
+  // 提取文件扩展名
+  const ext = originalFileName.substring(originalFileName.lastIndexOf('.'));
+  
+  // 生成时间戳和随机字符串
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  
+  // 使用时间戳_随机字符串.扩展名 的格式
+  return `${timestamp}_${random}${ext}`;
+}
+
 export async function uploadPDFToSupabase(
   pdfBlob: Blob,
   fileName: string,
@@ -21,10 +37,11 @@ export async function uploadPDFToSupabase(
     console.log(`📤 开始上传 PDF: ${fileName}`);
     
     // 生成带时间戳的文件路径，避免文件名冲突
-    // 使用 URL 编码处理中文字符，确保兼容性
-    const timestamp = Date.now();
-    const encodedFileName = encodeURIComponent(fileName);
-    const filePath = `pdfs/${timestamp}_${encodedFileName}`;
+    // 使用安全的文件名生成，避免中文字符问题
+    const safeFileName = generateSafeFileName(fileName);
+    const filePath = `pdfs/${safeFileName}`;
+    console.log(`   原始文件名: ${fileName}`);
+    console.log(`   安全文件名: ${safeFileName}`);
     
     // 上传文件
     const { data, error } = await supabase.storage
@@ -37,6 +54,18 @@ export async function uploadPDFToSupabase(
 
     if (error) {
       console.error('❌ PDF 上传失败:', error);
+      console.error('   错误详情:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.error,
+        bucket: bucketName,
+        path: filePath
+      });
+      console.error('   可能的原因:');
+      console.error('   1. 存储桶不存在或名称错误');
+      console.error('   2. 存储桶权限策略（RLS）不允许上传');
+      console.error('   3. 文件大小超过限制');
+      console.error('   4. 网络连接问题');
       return null;
     }
 

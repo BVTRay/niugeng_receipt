@@ -16,7 +16,7 @@ async function testReceiptRecords() {
     searchReceipts,
     updateReceiptStatus,
     getReceiptStatistics
-  } = await import('./supabase-database.js');
+  } = await import('../src/lib/supabase-database.js');
 
   let allTestsPassed = true;
 
@@ -123,4 +123,5 @@ async function testReceiptRecords() {
 }
 
 testReceiptRecords();
+
 

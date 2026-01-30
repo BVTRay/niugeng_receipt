@@ -9,7 +9,7 @@ async function checkTables() {
   console.log('\n🔍 检查数据库表...\n');
 
   // 动态导入 Supabase 客户端（确保环境变量已加载）
-  const { supabase } = await import('./supabase-client.js');
+  const { supabase } = await import('../src/lib/supabase-client.js');
 
   try {
     // 检查 app_configs 表

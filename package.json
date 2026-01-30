@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "setup:env": "node setup-env.cjs",
-    "test:supabase": "tsx test-supabase.ts",
-    "test:database": "tsx test-database.ts",
-    "test:receipts": "tsx test-receipt-records.ts",
-    "check:tables": "tsx check-tables.ts"
+    "setup:env": "node scripts/setup-env.cjs",
+    "test:supabase": "tsx scripts/test-supabase.ts",
+    "test:database": "tsx scripts/test-database.ts",
+    "test:receipts": "tsx scripts/test-receipt-records.ts",
+    "test:storage": "tsx scripts/test-storage-upload.ts",
+    "test:storage-direct": "tsx scripts/test-storage-direct.ts",
+    "check:bucket": "tsx scripts/check-bucket-direct.ts",
+    "check:tables": "tsx scripts/check-tables.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.93.3"

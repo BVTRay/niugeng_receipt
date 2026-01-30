@@ -9,6 +9,40 @@ import { supabase } from './supabase-client';
 const DEFAULT_BUCKET = 'receipts';
 
 /**
+ * 生成安全的文件名
+ * 使用时间戳和随机字符串，避免中文字符和特殊字符导致的问题
+ */
+function generateSafeFileName(originalFileName: string): string {
+  // 提取文件扩展名
+  const ext = originalFileName.substring(originalFileName.lastIndexOf('.'));
+  
+  // 生成时间戳和随机字符串
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  
+  // 使用时间戳_随机字符串.扩展名 的格式
+  return `${timestamp}_${random}${ext}`;
+}
+
+/**
+ * 清理文件名，移除不安全的字符（保留用于显示）
+ */
+function sanitizeFileName(fileName: string): string {
+  // 提取文件扩展名
+  const ext = fileName.substring(fileName.lastIndexOf('.'));
+  const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+  
+  // 替换不安全字符为下划线
+  const sanitized = nameWithoutExt
+    .replace(/[<>:"|?*\x00-\x1F]/g, '_') // 移除 Windows 不支持的字符
+    .replace(/\s+/g, '_') // 空格替换为下划线
+    .replace(/_{2,}/g, '_') // 多个下划线合并为一个
+    .replace(/^_+|_+$/g, ''); // 移除首尾下划线
+  
+  return sanitized + ext;
+}
+
+/**
  * 上传文件到 Supabase 存储桶
  * @param file 文件对象
  * @param path 存储路径（可选，默认使用时间戳生成）
@@ -21,8 +55,21 @@ export async function uploadFile(
   bucketName: string = DEFAULT_BUCKET
 ): Promise<{ path: string; publicUrl: string } | null> {
   try {
-    // 如果没有提供路径，使用时间戳和文件名生成
-    const filePath = path || `${Date.now()}_${file.name}`;
+    console.log(`📤 准备上传文件到存储桶: ${bucketName}`);
+    console.log(`   文件名: ${file.name}`);
+    console.log(`   文件大小: ${(file.size / 1024).toFixed(2)} KB`);
+    
+    // 如果没有提供路径，使用安全的文件名生成
+    let filePath: string;
+    if (path) {
+      filePath = path;
+    } else {
+      // 使用时间戳和随机字符串生成安全的文件名，避免中文字符问题
+      const safeFileName = generateSafeFileName(file.name);
+      filePath = safeFileName;
+    }
+    console.log(`   存储路径: ${filePath}`);
+    console.log(`   原始文件名: ${file.name}`);
 
     // 上传文件
     const { data, error } = await supabase.storage
@@ -33,7 +80,14 @@ export async function uploadFile(
       });
 
     if (error) {
-      console.error('文件上传失败:', error);
+      console.error('❌ 文件上传失败:', error);
+      console.error('   错误详情:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.error,
+        bucket: bucketName,
+        path: filePath
+      });
       return null;
     }
 
@@ -41,6 +95,10 @@ export async function uploadFile(
     const { data: urlData } = supabase.storage
       .from(bucketName)
       .getPublicUrl(data.path);
+
+    console.log('✅ 文件上传成功!');
+    console.log(`   文件路径: ${data.path}`);
+    console.log(`   公开URL: ${urlData.publicUrl}`);
 
     return {
       path: data.path,
@@ -174,11 +232,17 @@ export async function uploadBase64Image(
     // 创建 File 对象
     const file = new File([blob], fileName, { type: 'image/png' });
     
-    // 使用现有的上传函数
-    return await uploadFile(file, undefined, bucketName);
+    // 生成带时间戳的文件路径，组织到 images 文件夹
+    // 使用安全的文件名生成，避免中文字符问题
+    const safeFileName = generateSafeFileName(fileName);
+    const filePath = `images/${safeFileName}`;
+    
+    // 使用现有的上传函数，指定路径
+    return await uploadFile(file, filePath, bucketName);
   } catch (error) {
     console.error('Base64 图片上传失败:', error);
     return null;
   }
 }
+
 
